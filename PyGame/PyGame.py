@@ -1,4 +1,4 @@
-﻿import os, sys, pygame, enum
+﻿import os, sys, pygame, enum, math
 from pygame.locals import *
 
 
@@ -11,9 +11,13 @@ def process_events():
             return False
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            text = font.render(str(pygame.mouse.get_pos()), 1, (255, 0, 0))
+
+            position = pygame.mouse.get_pos()
+            message = "Mouse clicked at position: " + str(position)
+            text = font.render(message, 1, (255, 0, 0))
             display.fill(Color("black"))
-            display.blit(text, (1000, 900))
+            player.draw()
+            display.blit(text, position)
             
 
         elif event.type == pygame.MOUSEBUTTONUP:
@@ -47,37 +51,59 @@ def process_events():
 
     return True
 
+def width_from_percent(percent):
+    return math.round(percent * width)
+
+def height_from_percent(percent):
+    return math.round(percent * height)
+
 def load_image(name):
     image = pygame.image.load(os.path.join("data", name))
 
-    if image.getalpha():
+    if image.get_alpha() != None:
         image = image.convert_alpha()
     else:
         image = image.convert()
 
     return image
 
+def get_sprite_from_spritesheet(spritesheet, sprite_rect = pygame.Rect(0, 0, 64, 64)):
 
-class Dir(enum.Enum):
+    surf = pygame.Surface(sprite_rect.size).convert_alpha()
+
+    surf.blit(spritesheet.sprite, (0, 0), sprite_rect)
+
+    return surf
+
+class Direction(enum.Enum):
     right = 1
     left = 2
 
-class Player:
-    def __init__(self, sprites, position=(0,0), velocity=0, direction=Dir.right):
-        self.sprites_list = sprites
+class Player(pygame.sprite.Sprite):
+    def __init__(self, spritesheet, position=[0,0], velocity=0, direction = Direction.right):
+        pygame.sprite.Sprite.__init__(self)
+
+        self.spritesheet = spritesheet
         self.position = position
         self.direction = direction
         self.velocity = velocity
 
-    def update():
-        pass
+    def move(self, direction = Direction.right):
+        self.position[0] += 1
+        self.direction  = direction
+        self.velocity = 1
 
-class PlayerSprite(pygame.sprite.Sprite):
-    def __init__(self, ):
+    def draw(self):
+        self.sprite = get_sprite_from_spritesheet(self.spritesheet)
+        display.blit(self.sprite, tuple(self.position)) 
+
+
+class Spritesheet(pygame.sprite.Sprite):
+    def __init__(self, spritesheet):
         pygame.sprite.Sprite.__init__(self)
         
-        this.image = load_image("platformerSprites.png")
-        this.rect = rect
+        self.sprite = load_image(spritesheet)
+        self.rect = self.sprite.get_rect()
 
 
 
@@ -91,24 +117,19 @@ BLACK = Color("black")
 
 display = pygame.display.set_mode(resolution)
 
-pygame.display.set_caption("Campbell Game")
+pygame.display.set_caption("Game")
 
 display.fill(BLACK)
 
 clock = pygame.time.Clock()
 
-font = pygame.font.Font(None, 26)
+font = pygame.font.Font(None, 36)
 
-#display.blit(spritesheet, (0, 0))
+#spritesGroup = pygame.sprite.Group()
 
-spritesGroup = pygame.sprite.Group()
+player_spritesheet = Spritesheet("platformerSprites.png")
 
-#for sprite in spritesheet
-
-
-
-
-#player1 = Player(sprites)
+player = Player(player_spritesheet, [500, 500])
 
 
 while process_events():
@@ -116,7 +137,9 @@ while process_events():
     """Drawing calls"""            
 
     #display.fill((0, 0, 0))
- 
+
+    #player.draw()
+
     pygame.display.flip()
 
     clock.tick(FPS)
