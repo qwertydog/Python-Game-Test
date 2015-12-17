@@ -4,22 +4,22 @@ from pygame.locals import *
 
 def process_events():
 
-    for event in pygame.event.get():
+    for event in event.get():
         if event.type == pygame.QUIT:            
             return False
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            position = pygame.mouse.get_pos()
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            """position = pygame.mouse.get_pos()
             message = "Mouse clicked at position: " + str(position)
             text = font.render(message, 1, (255, 0, 0))
             display.fill(Color("black"))        
-            display.blit(text, position)    
+            display.blit(text, position)    """
 
         elif event.type == pygame.MOUSEBUTTONUP:
             pass
 
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
+            if event.key == K_UP:
                 player.jump()
 
             elif event.key == pygame.K_DOWN:
@@ -57,7 +57,7 @@ def height_from_percent(percent):
 
 def load_image(name):
     image = pygame.image.load(os.path.join("data", name))
-
+    
     if image.get_alpha() != None:
         image = image.convert_alpha()
     else:
@@ -80,7 +80,7 @@ class Direction(enum.Enum):
 class Animation():
     def __init__(self, sprites_list):
         self.sprites = sprites_list
-        self.num_sprites = len(sprites)
+        self.num_sprites = len(self.sprites)
 
 class Player(pygame.sprite.Sprite):
     velocity = [0, 0]
@@ -88,15 +88,16 @@ class Player(pygame.sprite.Sprite):
     max_velocity = 10
     max_jump_height = 50
 
-    def __init__(self, spritesheet, position=[0,0], direction = Direction.right):
+    def __init__(self, spritesheet, screen_rect, position=[0,0], direction = Direction.right):
         pygame.sprite.Sprite.__init__(self)
         
         self.spritesheet = spritesheet
         #self.animation_dict = animation_dict
+        self.screen = screen_rect
         self.image = get_sprite_from_spritesheet(spritesheet, Rect(0, 64*8, 64, 64))
-        self.rect = self.image.get_rect()
-        self.position = position
-        self.ground_level = self.rect.bottom
+        self.rect = self.image.get_bounding_rect()
+        self.rect.x = position[0]
+        self.rect.y = position[1]
         self.direction = direction
         
     def update(self):
@@ -110,23 +111,21 @@ class Player(pygame.sprite.Sprite):
             self.crouch()
 
     def move(self, direction = Direction.right):
-        
-       # if self.rect.bottom == self.ground_level:
+
         if self.state != "moving":
             self.state = "moving"
-
-       #Anima
-       
-       
 
         if direction != self.direction:
             self.image = pygame.transform.flip(self.image, 1, 0)
             self.direction = direction
 
         if direction == Direction.right:
-            self.position[0] += self.velocity[0]
+            self.rect.move_ip(self.velocity[0], 0)
         else:
-            self.position[0] -= self.velocity[0]
+            self.rect.move_ip(-self.velocity[0], 0)
+        
+        if not self.screen.contains(self.rect):
+            self.rect.clamp_ip(self.screen)
 
         if self.velocity[0] < self.max_velocity:
             self.velocity[0] += 1
@@ -160,13 +159,23 @@ class Player(pygame.sprite.Sprite):
         pass
 
     def crouch(self):
-        pass
+
+        if self.state != "crouching":
+            self.state = "crouching"
+            self.rect.move_ip(0, 5)
+            self.image = get_sprite_from_spritesheet(self.spritesheet, Rect(64, 64*6, 64, 64))
+            if self.direction == Direction.left:
+                self.image = pygame.transform.flip(self.image, 1, 0)
 
     def stand(self):
-        pass    
+        self.state = "still"
+        self.rect.move_ip(0, -5)
+        self.image = get_sprite_from_spritesheet(self.spritesheet, Rect(0, 64*8, 64, 64))
+        if self.direction == Direction.left:
+            self.image = pygame.transform.flip(self.image, 1, 0)
 
     def draw(self):
-        display.blit(self.image, tuple(self.position)) 
+        display.blit(self.image, self.rect) 
 
 
 class Spritesheet():
@@ -199,16 +208,16 @@ font = pygame.font.Font(None, 36)
 
 player_spritesheet = Spritesheet("platformerSprites.png")
 
-player = Player(player_spritesheet, [500, 500])
+player = Player(player_spritesheet, display.get_rect(), display.get_rect().center)
 
-ground_rect = Rect(0, 500+64, width, 500-64)
+#ground_rect = Rect(0, 500+64, width, 500-64)
 
 while process_events():
 
-    """Drawing calls"""            
+    #Drawing calls           
 
     display.fill(BLACK)
-    display.fill((0, 130, 0), ground_rect)
+    #display.fill((0, 130, 0), ground_rect)
     player.update()
     player.draw()
 
